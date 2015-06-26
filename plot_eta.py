@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 from ciabatta import ejm_rcparams
-from dataset import Superset
+from colors import *
+from dataset import pickle_load
 import numpy as np
-from paths import *
+import paths
 
-save_flag = False
+save_flag = True
 
 use_latex = save_flag
 use_pgf = True
@@ -15,37 +16,45 @@ fig = plt.figure(figsize=(12, 12 * ejm_rcparams.golden_ratio))
 ax = fig.add_subplot(111)
 ejm_rcparams.prettify_axes(ax)
 
-res = 0.7
+dr = 0.7
 alg = 'mean'
 
 
-def get_stat(dset_paths):
-    superset = Superset(dset_paths)
+def get_stat(pickle_path):
+    superset = pickle_load(pickle_path)
     eta_0, eta_0_err = superset.get_eta_0()
-    f_peak, f_peak_err = superset.get_f_peak(alg, res)
+    f_peak, f_peak_err = superset.get_f_peak(alg, dr)
     return eta_0, eta_0_err, f_peak, f_peak_err
 
-eta_0, eta_0_err, f_peak, f_peak_err = get_stat(exp_dset_paths)
-ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Experiment')
+eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_pickle_path)
+ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Experiment', c=color_exp)
 
-eta_0, eta_0_err, f_peak, f_peak_err = get_stat(zero_dset_paths)
-ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Simulation, $D_r^c = 0$')
+# superset = pickle_load(paths.exp_pickle_path)
+# gamma_fit, gamma_fit_err, k_fit, k_fit_err = superset.fit_to_model(alg, dr)
+# f_peak_model = superset.get_f_peak_model(gamma_fit, k_fit)
+# if use_latex:
+#     label = r'Model fit, $\tau^{-1} = \SI{%.2g}{\per\s}, k = %.2g$' % (gamma_fit, k_fit)
+# else:
+#     label = r'Model fit, $\tau^{-1} = %.2g s^{-1}, k = %.2g$' % (gamma_fit, k_fit)
+# ax.scatter(eta_0, f_peak_model, label=label, c=color_model)
 
-# eta_0, eta_0_err, f_peak, f_peak_err = get_stat(D0_1_dset_paths)
-# ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Simulation, $D_r^c = 0.1$')
+eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_0_pickle_path)
+ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'$D_r^c = 0$', c=color_0)
 
-# eta_0, eta_0_err, f_peak, f_peak_err = get_stat(D1_dset_paths)
-# ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Simulation, $D_r^c = 1$')
+eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_10_pickle_path)
+if use_latex:
+    label = r'$D_r^c = \SI{10}{\per\s}$'
+else:
+    label = r'$D_r^c = 10 s^{-1}$'
+ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=label, c=color_opt)
 
-# eta_0, eta_0_err, f_peak, f_peak_err = get_stat(D10_dset_paths)
-# ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Simulation, $D_r^c = 10$')
+eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_inf_pickle_path)
+ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'$D_r^c = \infty$', c=color_inf)
 
-eta_0, eta_0_err, f_peak, f_peak_err = get_stat(inf_dset_paths)
-ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Simulation, $D_r^c = \infty$')
+ax.axhline(1.0, c=color_accum)
 
-ax.axhline(1.0, label='Complete accumulation')
-
-ax.legend(loc='upper right', fontsize=26)
+ax.legend(loc='lower left', fontsize=24)
+# ax.legend(loc='upper right', fontsize=26)
 ax.set_xscale('log')
 ax.set_xlabel(r'$\eta_0$', fontsize=35)
 ax.set_ylabel(r'$\eta / \eta_0$', fontsize=35)
@@ -54,6 +63,6 @@ ax.set_ylim(0.199, 1.101)
 ax.set_xlim(0.006, 0.6)
 
 if save_flag:
-    plt.savefig('dependence_eta.pdf', bbox_inches='tight')
+    plt.savefig('plots/dependence_eta.pdf', bbox_inches='tight')
 else:
     plt.show()

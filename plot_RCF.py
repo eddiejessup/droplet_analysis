@@ -1,13 +1,16 @@
 import matplotlib.pyplot as plt
 from ciabatta import ejm_rcparams
+from colors import *
 import dataset
 import numpy as np
+import paths
 
 save_flag = True
 
 use_latex = save_flag
 use_pgf = True
 
+alg = 'mean'
 n_samples = 1e4
 dr = 0.2
 dr_exp = 0.4
@@ -16,50 +19,36 @@ dr_peak = 0.7
 
 ejm_rcparams.set_pretty_plots(use_latex, use_pgf)
 
-sim_dset_name_0 = '/Users/ejm/Desktop/droplet/data_analysis/n_2430_Rd_28.8_Drc_0_test'
-sim_dset_name_inf = '/Users/ejm/Desktop/droplet/data_analysis/n_2430_Rd_28.8_Drc_inf_test'
-exp_dset_name = '/Users/ejm/Desktop/droplet/data/exp/smooth/runs/D011'
-exp_dset_name_2 = '/Users/ejm/Desktop/droplet/data/exp/smooth/runs/D33'
-
 fig = plt.figure(figsize=(12, 12 * ejm_rcparams.golden_ratio))
 ax = fig.add_subplot(111)
 ejm_rcparams.prettify_axes(ax)
 
-# dset = dataset.get_dset(exp_dset_name, filter_z_flag=True)
-# R_peak, R_peak_err = dset.get_R_peak('mean', dr=dr_peak)
-# g, ge, R = dset.get_rcf(dr_exp, n_samples, R_min=R_peak)
-# close = R < R_close
-# g = g[close]
-# ge = ge[close]
-# R = R[close]
-# ax.errorbar(R, g, yerr=ge, label='Experiment')
-
-dset = dataset.get_dset(exp_dset_name_2, filter_z_flag=True)
-R_peak, R_peak_err = dset.get_R_peak('mean', dr=dr_peak)
+dset = dataset.get_dset(paths.correlation_exp_1_dset_path, filter_z_flag=True)
+R_peak, R_peak_err = dset.get_R_peak(alg=alg, dr=dr_peak)
 g, ge, R = dset.get_rcf(dr_exp, n_samples, R_min=R_peak)
 close = R < R_close
 g = g[close]
 ge = ge[close]
 R = R[close]
-ax.errorbar(R, g, yerr=ge, label='Experiment')
+ax.errorbar(R, g, yerr=ge, label=r'Experiment', c=color_exp)
 
-dset = dataset.get_dset(sim_dset_name_0)
-R_peak, R_peak_err = dset.get_R_peak('mean', dr=dr_peak)
+dset = dataset.get_dset(correlation_Drc_0_dset_path)
+R_peak, R_peak_err = dset.get_R_peak(alg=alg, dr=dr_peak)
 g, ge, R = dset.get_rcf(dr, n_samples, R_min=R_peak)
 close = R < R_close
 g = g[close]
 ge = ge[close]
 R = R[close]
-ax.errorbar(R, g, yerr=ge, label='Simulation, $D_r^c = 0$')
+ax.errorbar(R, g, yerr=ge, label=r'$D_r^c = 0$', c=color_0)
 
-dset = dataset.get_dset(sim_dset_name_inf)
-R_peak, R_peak_err = dset.get_R_peak('mean', dr=dr_peak)
+dset = dataset.get_dset(correlation_Drc_inf_dset_path)
+R_peak, R_peak_err = dset.get_R_peak(alg=alg, dr=dr_peak)
 g, ge, R = dset.get_rcf(dr, n_samples, R_min=R_peak)
 close = R < R_close
 g = g[close]
 ge = ge[close]
 R = R[close]
-ax.errorbar(R, g, yerr=ge, label='Simulation, $D_r^c = \infty$')
+ax.errorbar(R, g, yerr=ge, label=r'$D_r^c = \infty$', c=color_inf)
 
 ax.axhline(1.0, c=ejm_rcparams.almost_black, ls='--')
 
@@ -72,6 +61,6 @@ ax.set_ylim(0.0, None)
 ax.set_xlim(0.0, R_close)
 
 if save_flag:
-    plt.savefig('RCF.pdf', bbox_inches='tight')
+    plt.savefig('plots/RCF.pdf', bbox_inches='tight')
 else:
     plt.show()

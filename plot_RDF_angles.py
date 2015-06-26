@@ -1,21 +1,17 @@
 import matplotlib.pyplot as plt
-from dataset import Dataset
-import glob
+import dataset
 from ciabatta import ejm_rcparams
 import numpy as np
+import paths
 
-use_latex = True
+save_flag = True
+
+use_latex = save_flag
 use_pgf = True
 
 ejm_rcparams.set_pretty_plots(use_latex, use_pgf)
 
-
-res = 0.7
-
-dset_name = 'D31'
-data_dir = '/Users/ejm/Projects/Droplet/Data'
-dset_dir = '{}/Experiment/wholedrop/Runs'.format(data_dir)
-run_fnames = glob.glob('{}/{}/dyn/*.npz'.format(dset_dir, dset_name))
+dr = 0.7
 
 fig = plt.figure(figsize=(12, 12 * ejm_rcparams.golden_ratio))
 ax = fig.add_subplot(111)
@@ -25,19 +21,16 @@ ejm_rcparams.prettify_axes(ax)
 theta_factors = np.arange(1, 7)
 
 for theta_factor in theta_factors:
+    force_fullsphere = theta_factor == 1
     if theta_factor == 1:
-        force_hemisphere = False
         theta_max = np.pi / 2.0
     else:
-        force_hemisphere = True
         theta_max = np.pi / theta_factor
 
-    dset = Dataset(run_fnames, theta_max=theta_max,
-                   force_hemisphere=force_hemisphere)
+    dset = dataset.get_dset(paths.wholedrop_dset_path, theta_max=theta_max,
+                            force_fullsphere=force_fullsphere)
 
-    rhos_norm, rhos_norm_err, R_edges_norm = dset.get_rhos_norm(res)
-    vp, vp_err = dset.get_vp()
-    R = dset.R
+    rhos_norm, rhos_norm_err, R_edges_norm = dset.get_rhos_norm(dr)
     label = r'$\theta_\mathrm{max} = \pi'
     if theta_factor > 1:
         label += r' / {}'.format(theta_factor)
@@ -45,7 +38,8 @@ for theta_factor in theta_factors:
 
     ax.errorbar(R_edges_norm[:-1], rhos_norm, yerr=rhos_norm_err,
                 label=label, lw=2)
-ax.legend(loc='upper left', fontsize=26, ncol=2)
+
+ax.legend(loc='upper left', fontsize=24, ncol=2)
 
 ax.set_ylim(0.0, 2.0)
 ax.set_xlim(0.0, 1.05)
@@ -56,5 +50,7 @@ ax.tick_params(axis='both', labelsize=24, pad=10.0)
 
 ax.tick_params(axis='both', which='both')
 
-# plt.show()
-plt.savefig('Fig S3 Theta.pdf', bbox_inches='tight')
+if save_flag:
+    plt.savefig('plots/RDF_angles.pdf', bbox_inches='tight')
+else:
+    plt.show()

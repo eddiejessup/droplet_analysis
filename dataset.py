@@ -8,6 +8,7 @@ import scipy.stats as st
 from scipy.spatial.distance import pdist
 from scipy.optimize import curve_fit
 import glob
+import pickle
 
 
 def f_peak_model(eta_0, R, k, gamma,
@@ -132,6 +133,17 @@ def line_intersections_up(y, y0):
     return inds
 
 
+def pickle_dump(dset_paths, pickle_name):
+    s = Superset(dset_paths)
+    with open(pickle_name, 'wb') as f:
+        pickle.dump(s, f)
+
+
+def pickle_load(pickle_name):
+    with open(pickle_name, 'rb') as f:
+        return pickle.load(f)
+
+
 class Dataset(object):
     buff = 1.1
     V_p = 0.7
@@ -139,10 +151,13 @@ class Dataset(object):
     A_p = np.pi * R_p ** 2
     v = 13.5
 
-    def __init__(self, run_fnames, theta_max=None, filter_z_flag=False):
+    def __init__(self, run_fnames, theta_max=None, force_fullsphere=False, filter_z_flag=False):
         self.run_fnames = run_fnames
         self.is_hemisphere = True
+        self.force_fullsphere = force_fullsphere
         self.filter_z_flag = filter_z_flag
+        self.theta_max = theta_max
+        self.is_hemisphere = not self.force_fullsphere
 
         if not run_fnames:
             raise Exception('No dyn files given')
@@ -151,7 +166,7 @@ class Dataset(object):
         for d in self.run_fnames:
             set_dirname = join(dirname(self.run_fnames[0]), '..')
             set_code = basename(normpath(set_dirname))
-            stat = np.load('%s/static.npz' % set_dirname)
+            stat = np.load('{}/static.npz'.format(set_dirname))
             R_drops.append(stat['R_d'])
             set_codes.append(set_code)
 
@@ -162,15 +177,15 @@ class Dataset(object):
             raise Exception
         self.R = float(R_drops[0])
 
-        if theta_max is None:
+        if self.theta_max is None:
             self.theta_max = np.pi / 3.0
-        if theta_max > np.pi / 2.0:
+        if self.theta_max > np.pi / 2.0:
             raise Exception('theta_max must be less than or equal to pi / 2')
 
-        def make_valid_func(R_drop, theta_max):
+        def make_valid_func(R_drop, theta_max, force_fullsphere):
             def valid(r):
                 r_mag = vector.vector_mag(r)
-                if r[-1] < 0.0:
+                if (not force_fullsphere) and r[-1] < 0.0:
                     return False
                 if r_mag > R_drop:
                     return False
@@ -180,12 +195,14 @@ class Dataset(object):
                 return True
             return valid
 
-        self.valid_func = make_valid_func(self.R, self.theta_max)
+        self.valid_func = make_valid_func(self.R, self.theta_max,
+                                          self.force_fullsphere)
 
         self.xyzs = []
         for d in self.run_fnames:
             xyz = np.array([x for x in np.load(d)['r'] if self.valid_func(x)])
-            self.xyzs.append(xyz)
+            if xyz.shape[0] > 0:
+                self.xyzs.append(xyz)
         if self.filter_z_flag:
             self.filter_z()
 
@@ -268,6 +285,7 @@ class Dataset(object):
         try:
             i_peak = line_intersections_up(rhos, rho_base)[-1]
         except IndexError:
+            print(self.run_fnames[0])
             raise Exception(self.run_fnames[0])
         return i_peak
 
@@ -276,7 +294,7 @@ class Dataset(object):
         ns, ns_err, R_edges = self.get_ns(dr)
 
         Rs = 0.5 * (R_edges[:-1] + R_edges[1:])
-        R_peak = Rs[i_peak]
+        R_peak = Rs[i_peak - 1]
         R_peak_err = (R_edges[1] - R_edges[0]) / 2.0
         return R_peak, R_peak_err
 
@@ -290,11 +308,16 @@ class Dataset(object):
         return R_peak / self.R, R_peak_err / self.R
 
     def get_n_peak(self, alg, dr):
-        i_peak = self.get_i_peak(alg, dr)
         ns, ns_err, R_edges = self.get_ns(dr)
 
-        n_peak = ns[i_peak:].sum()
-        n_peak_err = np.sqrt(np.sum(np.square(ns_err[i_peak:])))
+        try:
+            i_peak = self.get_i_peak(alg, dr)
+        except Exception:
+            n_peak = np.nan
+            n_peak_err = np.nan
+        else:
+            n_peak = ns[i_peak:].sum()
+            n_peak_err = np.sqrt(np.sum(np.square(ns_err[i_peak:])))
         return n_peak, n_peak_err
 
     def get_n_bulk(self, alg, dr):
@@ -453,7 +476,9 @@ class Dataset(object):
             return valid_func
         valid_func = make_valid_func(R_min)
 
-        return vector.rejection_pick(L=2.0 * self.R, n=n_samples,
+        dim = self.xyzs[0].shape[-1]
+
+        return vector.rejection_pick(L=2.0 * self.R, n=n_samples, d=dim,
                                      valid=valid_func)
 
     def get_xyzs_actual(self, R_min):
@@ -500,6 +525,15 @@ class Dataset(object):
         for xyz in self.xyzs:
             xyz[:, -1] += np.random.uniform(-dz / 2.0, dz / 2.0, size=len(xyz))
 
+    def get_direct(self):
+        set_dirname = join(dirname(self.run_fnames[0]), '..')
+        track = np.load('{}/tracking.npz'.format(set_dirname))
+        return track['t'], track['r1'], track['r2']
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['valid_func']
+        return state
 
 def unzip(results):
     return zip(*results)
@@ -540,8 +574,14 @@ class Superset(object):
     def get_eta_0(self):
         return unzip([d.get_eta_0() for d in self.sets])
 
+    def get_eta(self, alg, dr):
+        return unzip([d.get_eta(alg, dr) for d in self.sets])
+
     def get_f_peak(self, alg, dr):
         return unzip([d.get_f_peak(alg, dr) for d in self.sets])
+
+    def get_f_peak_model(self, gamma, k):
+        return np.array([d.get_f_peak_model(gamma, k) for d in self.sets])
 
     def get_R(self):
         return np.array([d.R for d in self.sets])
