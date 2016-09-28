@@ -29,27 +29,30 @@ def get_stat(pickle_path):
 eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_pickle_path)
 ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'Experiment', c=color_exp)
 
-# superset = pickle_load(paths.exp_pickle_path)
-# gamma_fit, gamma_fit_err, k_fit, k_fit_err = superset.fit_to_model(alg, dr)
-# f_peak_model = superset.get_f_peak_model(gamma_fit, k_fit)
-# if use_latex:
-#     label = r'Model fit, $\tau^{-1} = \SI{%.2g}{\per\s}, k = %.2g$' % (gamma_fit, k_fit)
-# else:
-#     label = r'Model fit, $\tau^{-1} = %.2g s^{-1}, k = %.2g$' % (gamma_fit, k_fit)
-# ax.scatter(eta_0, f_peak_model, label=label, c=color_model)
-
-eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_0_pickle_path)
-ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'$D_r^c = 0$', c=color_0)
-
-eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_10_pickle_path)
+superset = pickle_load(paths.exp_pickle_path)
+gamma_fit, gamma_fit_err, k_fit, k_fit_err = superset.fit_to_model(alg, dr)
+f_peak_model = superset.get_f_peak_model(gamma_fit, k_fit)
+# ch = np.sqrt(np.sum(np.square(f_peak_model - f_peak))) / len(f_peak_model)
+gamma_fit = 0.14
+k_fit = 0.08
 if use_latex:
-    label = r'$D_r^c = \SI{10}{\per\s}$'
+    label = r'Model fit, $\tau^{-1} = \SI{%.2g}{\per\s}, k = %.2g$' % (gamma_fit, k_fit)
 else:
-    label = r'$D_r^c = 10 s^{-1}$'
-ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=label, c=color_opt)
+    label = r'Model fit, $\tau^{-1} = %.2g s^{-1}, k = %.2g$' % (gamma_fit, k_fit)
+ax.scatter(eta_0, f_peak_model, label=label, c=color_model)
 
-eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_inf_pickle_path)
-ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'$D_r^c = \infty$', c=color_inf)
+# eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_0_pickle_path)
+# ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'$D_r^c = 0$', c=color_0)
+
+# eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_10_pickle_path)
+# if use_latex:
+#     label = r'$D_r^c = \SI{10}{\per\s}$'
+# else:
+#     label = r'$D_r^c = 10 s^{-1}$'
+# ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=label, c=color_opt)
+
+# eta_0, eta_0_err, f_peak, f_peak_err = get_stat(paths.exp_reproduction_Dr_0_05_Drc_inf_pickle_path)
+# ax.errorbar(eta_0, f_peak, xerr=eta_0_err, yerr=f_peak_err, ls='none', label=r'$D_r^c = \infty$', c=color_inf)
 
 ax.axhline(1.0, c=color_accum)
 

@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 import numpy as np
-from ciabatta import geom
+from spatious import geom
 import dataset
 
 

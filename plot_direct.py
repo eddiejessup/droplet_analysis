@@ -2,7 +2,8 @@
 from __future__ import print_function, division, unicode_literals
 import numpy as np
 import matplotlib.pyplot as plt
-from ciabatta import ejm_rcparams, vector
+from ciabatta import ejm_rcparams
+from spatious import vector
 from colors import *
 import dataset
 import paths
@@ -31,6 +32,16 @@ ps_0 = np.array(ps_0)
 ps_0_err = np.array(ps_0_err)
 R_peak_0 = d_0.get_R_peak(alg=alg, dr=dr)[0]
 
+# 10
+d_10 = dataset.get_dset(paths.direct_Drc_10_dset_path)
+Rps_10 = np.linspace(0.0, d_10.R, n_samples)
+t_10, r1_10, r2_10 = d_10.get_direct()
+r_10 = np.array([vector.vector_mag(r1_10), vector.vector_mag(r2_10)]).T
+ps_10, ps_10_err = unzip([scatlyse(t_10, r_10, Rp, t_steady) for Rp in Rps_10])
+ps_10 = np.array(ps_10)
+ps_10_err = np.array(ps_10_err)
+R_peak_10 = d_10.get_R_peak(alg=alg, dr=dr)[0]
+
 # Inf
 d_inf = dataset.get_dset(paths.direct_Drc_inf_dset_path)
 Rps_inf = np.linspace(0.0, d_inf.R, n_samples)
@@ -51,7 +62,7 @@ ps_nc = np.array(ps_nc)
 ps_nc_err = np.array(ps_nc_err)
 R_peak_nc = d_nc.get_R_peak(alg=alg, dr=dr)[0]
 
-# p_nc, pe_nc = scatlyse(t_nc, r_nc, R_peak_nc, t_steady)
+p_nc, pe_nc = scatlyse(t_nc, r_nc, R_peak_nc, t_steady)
 
 # p_0, pe_0 = scatlyse(t_0, r_0, R_peak_0, t_steady)
 # k_0 = p_0 - p_nc
@@ -63,11 +74,19 @@ R_peak_nc = d_nc.get_R_peak(alg=alg, dr=dr)[0]
 # ke_inf = dataset.qsum([pe_inf, pe_nc])
 # print(u'For inf, tilde k = {} ± {}'.format(k_inf, ke_inf))
 
+p_10, pe_10 = scatlyse(t_10, r_10, R_peak_10, t_steady)
+k_10 = p_10 - p_nc
+ke_10 = dataset.qsum([pe_10, pe_nc])
+print(u'For 10, tilde k = {} ± {}'.format(k_10, ke_10))
+
 ks_0 = ps_0 - ps_nc
 ks_0_err = dataset.qsum(ps_0_err, ps_nc_err)
 
 ks_inf = ps_inf - ps_nc
 ks_inf_err = dataset.qsum(ps_inf_err, ps_nc_err)
+
+ks_10 = ps_10 - ps_nc
+ks_10_err = dataset.qsum(ps_10_err, ps_nc_err)
 
 fig = plt.figure(figsize=(12, 12 * ejm_rcparams.golden_ratio))
 ax = fig.add_subplot(111)
@@ -75,6 +94,7 @@ ejm_rcparams.prettify_axes(ax)
 
 ax.errorbar(Rps_0 / d_0.R, ks_0, yerr=ks_0_err, label=r'$D_r^c = 0$', c=color_0)
 ax.errorbar(Rps_inf / d_inf.R, ks_inf, yerr=ks_inf_err, label=r'$D_r^c = \infty$', c=color_inf)
+ax.errorbar(Rps_10 / d_10.R, ks_10, yerr=ks_10_err, label=r'$D_r^c = \SI{10}{\per\s}$', c=color_opt)
 ax.axvline(R_peak_inf / d_inf.R, c=ejm_rcparams.almost_black, label=r'$R_p$')
 
 ax.legend(loc='upper left', fontsize=26)
